@@ -38,8 +38,8 @@ trait Billable
 
         $options['amount'] = $amount;
 
-        if (! array_key_exists('source', $options) && $this->stripe_id) {
-            $options['customer'] = $this->stripe_id;
+        if (! array_key_exists('source', $options) && ) {
+            $options['customer'] = $this->getStripeId();
         }
 
         if (! array_key_exists('source', $options) && ! array_key_exists('customer', $options)) {
@@ -113,9 +113,9 @@ trait Billable
      */
     public function invoice()
     {
-        if ($this->stripe_id) {
+        if ($this->getStripeId()) {
             try {
-                StripeInvoice::create(['customer' => $this->stripe_id], $this->getStripeKey())->pay();
+                StripeInvoice::create(['customer' => $this->getStripeId()], $this->getStripeKey())->pay();
             } catch (StripeErrorInvalidRequest $e) {
                 return false;
             }
@@ -133,7 +133,7 @@ trait Billable
     {
         try {
             $stripeInvoice = StripeInvoice::upcoming(
-                ['customer' => $this->stripe_id], ['api_key' => $this->getStripeKey()]
+                ['customer' => $this->getStripeId()], ['api_key' => $this->getStripeKey()]
             );
 
             return new Invoice($this, $stripeInvoice);
@@ -261,8 +261,8 @@ trait Billable
                     : null;
 
         if ($source) {
-            $this->card_brand = $source->brand;
-            $this->card_last_four = $source->last4;
+            $this->setCardBrand($source->brand);
+            $this->setCardLastFour($source->last4);
         }
 
         $this->save();
@@ -304,7 +304,7 @@ trait Billable
      */
     public function hasStripeId()
     {
-        return ! is_null($this->stripe_id);
+        return ! is_null($this->getStripeId());
     }
 
     /**
@@ -324,7 +324,7 @@ trait Billable
             $options, $this->getStripeKey()
         );
 
-        $this->stripe_id = $customer->id;
+        $this->setStripeId($customer->id);
 
         $this->save();
 
@@ -343,7 +343,7 @@ trait Billable
      */
     public function asStripeCustomer()
     {
-        return StripeCustomer::retrieve($this->stripe_id, $this->getStripeKey());
+        return StripeCustomer::retrieve($this->getStripeId(), $this->getStripeKey());
     }
 
     /**
@@ -365,7 +365,27 @@ trait Billable
     {
         return 0;
     }
-
+	
+	public function getStripeId()
+	{
+		return $this->stripe_id;
+	}
+	
+	public function setStripeId($id)
+	{
+		$this->stripe_id = $id;
+	}
+	
+	public function setCardBrand($cardBrand)
+	{
+		$this->card_brand = $cardBrand;
+	}
+	
+	public function setCardLastFour($cardLastFour)
+	{
+		$this->card_last_four = $cardLastFour;
+	}
+	
     /**
      * Get the Stripe API key.
      *
